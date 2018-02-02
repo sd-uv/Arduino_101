@@ -1,0 +1,4 @@
+Piezo Speaker 1 wired to pin 11 
+Coloured LED 1 wired to pin 2 with values D, G
+Analog Slider 1 wired to pin -1 
+Analog Slider 2 wired to pin A0 

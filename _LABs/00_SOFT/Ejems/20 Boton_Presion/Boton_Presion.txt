@@ -1,0 +1,2 @@
+Push Button 1 wired to pin 2 with values D, M
+Coloured LED 1 wired to pin 13 with values D, G
