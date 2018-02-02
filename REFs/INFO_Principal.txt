@@ -1,0 +1,13 @@
+*** Blog con la información de los sketches:
+
+https://bigdanzblog.wordpress.com/
+
+*** Sitio para Software original y versiones previas:
+
+https://github.com/futureshocked/arduino_sbs
+https://github.com/merbok/arduino_sbs
+https://github.com/twpsyn/arduino_sbs
+
+*** Referencias:
+
+http://www.crackshub.net/
