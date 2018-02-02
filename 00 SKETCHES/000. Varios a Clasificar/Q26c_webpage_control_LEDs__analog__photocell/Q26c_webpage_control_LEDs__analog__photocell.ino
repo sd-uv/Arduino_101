@@ -1,0 +1,208 @@
+/*
+ * A simple web server with a GET request parser.
+ *
+ */
+#include <Wire.h>
+#include <LCD.h>
+#include <LiquidCrystal_I2C.h>
+#include <SPI.h>
+#include <Ethernet.h>
+
+const byte B1PIN = 3;
+
+boolean backlighton = true;
+boolean buttonActive = false;
+
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+byte mac[] = { 0x90, 0xA2, 0xDA, 0x0F, 0x0F, 0x9D };
+
+
+String         message      = "";     //Will hold the confirmation message that will be shown to the user
+EthernetServer server(80);
+String         get_request  = "";     //Holds the GET request
+boolean        reading      = false;  //TRUE while the GET request is being received
+
+void setup()
+{
+
+  pinMode(B1PIN, INPUT);
+
+  lcd.begin(16,2);
+  lcd.home();
+  lcd.print("My IP address:");
+
+  Ethernet.begin(mac);
+  IPAddress ip = Ethernet.localIP();
+  server.begin();
+
+  lcd.setCursor(0,1);
+  lcd.print(Ethernet.localIP());
+}
+
+void loop() {
+  checkLCDBackLight();
+
+  // listen for incoming clients
+  EthernetClient   client = server.available();
+  String return_message; 
+
+  if (client) {
+    boolean sentContent    = false;
+    get_request           = "";
+    // an http request ends with a blank line
+    boolean        currentLineIsBlank = true;
+    while (client.connected()) {
+      if (client.available()) {
+        char       c = client.read();
+        if(reading && c == ' ') 
+        { 
+          reading = false;  
+          return_message = parseGetRequest(get_request);
+          break;
+        }
+
+        if(c == '?'){
+          reading = true; //found the ?, begin reading the info
+        }
+
+        if(reading){ 
+          get_request += c;
+        }
+
+
+        if (reading && c=='\n')
+        {
+          break; 
+        }
+
+        if (c == '\n' && currentLineIsBlank)  {
+          break;
+        }
+        if (c == '\n') {
+          currentLineIsBlank = true;
+        } 
+        else if (c != '\r') {
+          currentLineIsBlank = false;
+        }
+      }
+    }
+
+    if (!sentContent){
+      construct_page(client, return_message);         
+      sentContent = true;        
+    }
+
+    // give the web browser time to receive the data
+    delay(1);
+    // close the connection:
+    client.stop();
+  }
+}
+
+void construct_page(EthernetClient &client, String &rmessage)
+{
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println();
+  client.print("<html><head><title>");   
+  client.print("GET request example");
+  client.println("</title><body>");
+  client.println("<h2>Click buttons to turn red led on or off</h2>");
+  client.print("<form action='/' method='GET'><p><input type='hidden' name='led8'");
+  client.println(" value='0'><input type='submit' value='Off'/></form>");
+  client.print("<form action='/' method='GET'><p><input type='hidden' name='led8'");
+  client.print(" value='1'><input type='submit' value='On'/></form>");
+  client.println("<h2>Click buttons to turn yellow led on or off</h2>");
+  client.print("<form action='/' method='GET'><p><input type='hidden' name='led7'");
+  client.println(" value='0'><input type='submit' value='Off'/></form>");
+  client.print("<form action='/' method='GET'><p><input type='hidden' name='led7'");
+  client.print(" value='1'><input type='submit' value='On'/></form>");
+  client.println("<h2>Click buttons to turn green led on or off</h2>");
+  client.print("<form action='/' method='GET'><p><input type='hidden' name='ledA0'");
+  client.println(" value='0'><input type='submit' value='Off'/></form>");
+  client.print("<form action='/' method='GET'><p><input type='hidden' name='ledA0'");
+  client.print(" value='1'><input type='submit' value='On'/></form>");
+  client.print("Action(s) performed: <b>");
+  client.print(rmessage);
+  client.println("</b>");
+  client.println("<p>");
+  client.print("Photocell reading: ");
+  client.println(analogRead(A1));
+  client.print("</body>");
+  client.print("</html>");
+}
+
+String parseGetRequest(String &str) {
+  int   led_index  = str.indexOf("led");
+  int led_pin, led_val;
+  if (str[led_index + 3] == 'A') {
+    led_pin    = str[led_index + 4]  - '0';
+    led_pin += 20;
+    led_val    = str[led_index + 6]  - '0';
+  } else {
+    led_pin    = str[led_index + 3]  - '0';
+    led_val    = str[led_index + 5]  - '0';
+  }
+ 
+  String return_message = "";
+  return_message = "Setting LED ";
+  return_message += led_pin;
+  return_message += " to ";
+  return_message += led_val;
+  executeInstruction(led_pin, led_val);
+  return return_message;
+}
+
+void executeInstruction(int pin, int val)
+{ 
+  if (pin > 23) {
+    return;     
+  } 
+      
+  switch (pin) {
+    case 20:
+      pinMode(A0, OUTPUT);
+      digitalWrite(A0, val);
+      break;
+    case 21:
+      pinMode(A1, OUTPUT);
+      digitalWrite(A1, val);
+      break;
+    case 22:
+      pinMode(A2, OUTPUT);
+      digitalWrite(A2, val);
+      break;
+    case 23:
+      pinMode(A3, OUTPUT);
+      digitalWrite(A3, val);
+      break;
+    default:
+      pinMode(pin, OUTPUT);
+      digitalWrite(pin, val);  
+  }
+}
+
+
+void checkLCDBackLight() {
+
+  if ((digitalRead(B1PIN) == HIGH) ) {
+    if (buttonActive) {
+    } 
+    else {
+      if (backlighton) {
+        backlighton = false;
+        lcd.noBacklight();
+      } 
+      else {
+        lcd.backlight();
+        backlighton = true;
+      }
+      buttonActive = true;
+    }
+  }
+
+  if ((digitalRead(B1PIN) == LOW) && (buttonActive)) {
+    buttonActive = false;
+  }
+}
+

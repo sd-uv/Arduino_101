@@ -1,0 +1,2 @@
+#define CFG_MAILADDR "email@there.com"
+#define CFG_KEY "12345"
